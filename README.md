@@ -30,6 +30,7 @@ de paramétrage `MyPnParametrages` :
 | [docs/03-session.md](docs/03-session.md) | Section Ma session — connexion, langue, version, licence |
 | [docs/04-modele-donnees-et-api.md](docs/04-modele-donnees-et-api.md) | Modèle de données JSON et contrat d'API C# |
 | [docs/05-backlog.md](docs/05-backlog.md) | Lots, tâches, charges et ordonnancement |
+| [docs/prompt-vscode.md](docs/prompt-vscode.md) | Prompt autonome à coller dans une session Claude Code locale |
 
 ## Décisions en attente
 
