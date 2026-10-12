@@ -31,6 +31,8 @@ de paramétrage `MyPnParametrages` :
 | [docs/04-modele-donnees-et-api.md](docs/04-modele-donnees-et-api.md) | Modèle de données JSON et contrat d'API C# |
 | [docs/05-backlog.md](docs/05-backlog.md) | Lots, tâches, charges et ordonnancement |
 | [docs/prompt-vscode.md](docs/prompt-vscode.md) | Prompt autonome à coller dans une session Claude Code locale |
+| [docs/sg/SG-01-parametrage-profils.md](docs/sg/SG-01-parametrage-profils.md) | SG de l'affichage Paramétrage des profils (code livré v1.3 + 2026-10-08) |
+| [docs/sg/SG-02-parametrage-utilisateurs.md](docs/sg/SG-02-parametrage-utilisateurs.md) | SG de l'affichage Paramétrage des utilisateurs (code livré v1.3 + 2026-10-08) |
 
 ## Décisions en attente
 
