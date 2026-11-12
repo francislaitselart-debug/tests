@@ -2,14 +2,25 @@
 //  Time Tracker — Google Apps Script
 //  Tableau de bord publié en page web Google
 //  Calendrier : Francis PRO
-//  Mots-clés suivis : CODRA, TRANSPORTS, SPORTS (ventilés séparément)
+//  Catégories suivies : CODRA, TRANSPORTS, SPORTS, CONGÉS/FÉRIÉS (ventilées séparément)
 //  Fenêtre : 4 dernières semaines complètes
 // ============================================================
 
 // ---------- CONFIGURATION -----------------------------------
 var CALENDAR_ID = "francis.laitselart@gmail.com"; // ID du calendrier Francis PRO
-var KEYWORDS    = ["CODRA", "TRANSPORTS", "SPORTS"]; // Mots-clés à suivre (ordre = ordre d'affichage)
+var KEYWORDS    = ["CODRA", "TRANSPORTS", "SPORTS", "CONGÉS/FÉRIÉS"]; // Catégories à suivre (ordre = ordre d'affichage)
 var NB_SEMAINES = 4;                               // Nombre de semaines à analyser
+
+// Termes recherchés dans le titre pour chaque catégorie.
+// Comparaison sans tenir compte des majuscules ni des accents (CONGÉ = Congé = conge).
+// Une catégorie absente de cette table est recherchée par son propre nom.
+var TERMES = {
+  "CONGÉS/FÉRIÉS" : ["CONGE", "CONGES", "FERIE", "FERIES", "FERIEE", "FERIEES"]
+};
+
+// Durée comptée pour un événement « journée entière », par jour ouvré (lun–ven).
+// Les samedis et dimanches couverts par l'événement ne sont pas comptés.
+var DUREE_JOUR_MIN = 7.5 * 60; // 7h30 = 37h30 / 5
 
 // Objectif hebdomadaire par mot-clé (en minutes) : l'écart est affiché sous le badge de la semaine.
 // Ajoutez d'autres mots-clés ici si besoin, ex. "TRANSPORTS": 8 * 60
@@ -26,7 +37,8 @@ var COULEUR_ECART_ZERO  = "#188038"; // objectif atteint pile
 var COLORS = {
   "CODRA"      : { header: "#1a73e8", light: "#e8f0fe", border: "#c5d5fb", text: "#1a73e8" },
   "TRANSPORTS" : { header: "#188038", light: "#e6f4ea", border: "#b7dfbf", text: "#137333" },
-  "SPORTS"     : { header: "#e37400", light: "#fef3e2", border: "#f9c58d", text: "#b06000" }
+  "SPORTS"     : { header: "#e37400", light: "#fef3e2", border: "#f9c58d", text: "#b06000" },
+  "CONGÉS/FÉRIÉS" : { header: "#8430ce", light: "#f3e8fd", border: "#d7aefb", text: "#8430ce" }
 };
 // ------------------------------------------------------------
 
@@ -271,6 +283,14 @@ function getData() {
     totauxParKeyword[kw] = { totalMin: 0, nbEvents: 0 };
   });
 
+  // Une expression régulière par catégorie, compilée une seule fois.
+  // Recherche en mot entier pour éviter ex. "SPORTS" dans "TRANSPORTS".
+  var REGEX_PAR_KEYWORD = {};
+  KEYWORDS.forEach(function(kw) {
+    var termes = (TERMES[kw] || [kw]).map(normaliser);
+    REGEX_PAR_KEYWORD[kw] = new RegExp("(^|[^A-Z0-9])(" + termes.join("|") + ")([^A-Z0-9]|$)");
+  });
+
   var today = new Date();
   var jourSemaine  = today.getDay();
   var diffLundi    = (jourSemaine === 0) ? -6 : 1 - jourSemaine;
@@ -293,25 +313,21 @@ function getData() {
     KEYWORDS.forEach(function(kw) { parKeyword[kw] = []; });
 
     allEvents.forEach(function(ev) {
-      var titre     = ev.getTitle();
-      var titreUp   = titre.toUpperCase();
-      var start     = ev.getStartTime();
-      var end       = ev.getEndTime();
-      var dureeMin  = Math.round((end - start) / 60000);
+      var titre    = ev.getTitle();
+      var titreNorm = normaliser(titre);
+      var mesure   = mesurerEvenement(ev, debut, fin);
 
       KEYWORDS.forEach(function(kw) {
-        // Recherche mot entier pour éviter ex. "SPORTS" dans "TRANSPORTS"
-        var regex = new RegExp("(^|[^A-Z])" + kw.toUpperCase() + "([^A-Z]|$)");
-        if (regex.test(titreUp)) {
+        if (REGEX_PAR_KEYWORD[kw].test(titreNorm)) {
           parKeyword[kw].push({
             title     : titre,
-            dateStr   : Utilities.formatDate(start, "Europe/Paris", "EEE dd/MM"),
-            heureDebut: Utilities.formatDate(start, "Europe/Paris", "HH:mm"),
-            heureFin  : Utilities.formatDate(end,   "Europe/Paris", "HH:mm"),
-            dureeMin  : dureeMin
+            dateStr   : Utilities.formatDate(mesure.premierJour, "Europe/Paris", "EEE dd/MM"),
+            heureDebut: mesure.heureDebut,
+            heureFin  : mesure.heureFin,
+            dureeMin  : mesure.dureeMin
           });
-          grandTotalMin              += dureeMin;
-          totauxParKeyword[kw].totalMin += dureeMin;
+          grandTotalMin              += mesure.dureeMin;
+          totauxParKeyword[kw].totalMin += mesure.dureeMin;
           totauxParKeyword[kw].nbEvents += 1;
         }
       });
@@ -327,6 +343,46 @@ function getData() {
   }
 
   return { semaines: semaines, totauxParKeyword: totauxParKeyword };
+}
+
+
+// Met en majuscules et retire les accents : "Congés fériés" -> "CONGES FERIES"
+function normaliser(str) {
+  return String(str).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+}
+
+
+// Durée et horaires d'un événement, limités à la semaine [debut, fin].
+// Un événement « journée entière » compte DUREE_JOUR_MIN par jour ouvré couvert.
+function mesurerEvenement(ev, debut, fin) {
+  if (!ev.isAllDayEvent()) {
+    var start = ev.getStartTime();
+    var end   = ev.getEndTime();
+    return {
+      premierJour: start,
+      heureDebut : Utilities.formatDate(start, "Europe/Paris", "HH:mm"),
+      heureFin   : Utilities.formatDate(end,   "Europe/Paris", "HH:mm"),
+      dureeMin   : Math.round((end - start) / 60000)
+    };
+  }
+
+  // Dates de journée entière : fin exclusive (un congé du lundi a pour fin le mardi 00:00)
+  var jour   = new Date(Math.max(ev.getAllDayStartDate().getTime(), debut.getTime()));
+  var finExc = new Date(Math.min(ev.getAllDayEndDate().getTime(), fin.getTime() + 1));
+  jour.setHours(0, 0, 0, 0);
+  var premierJour = new Date(jour);
+  var nbJours = 0;
+  while (jour < finExc) {
+    var j = jour.getDay();
+    if (j !== 0 && j !== 6) nbJours++;
+    jour.setDate(jour.getDate() + 1);
+  }
+  return {
+    premierJour: premierJour,
+    heureDebut : "Journ\u00e9e",
+    heureFin   : nbJours + " j ouvr\u00e9" + (nbJours > 1 ? "s" : ""),
+    dureeMin   : nbJours * DUREE_JOUR_MIN
+  };
 }
 
 
