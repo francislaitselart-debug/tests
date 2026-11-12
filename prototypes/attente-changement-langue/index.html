@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Attente changement de langue</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body { margin: 0; min-height: 100vh; font-family: system-ui, "Segoe UI", Roboto, sans-serif;
+           background: #f3f5f9; color: #1b2433; }
+    @media (prefers-color-scheme: dark) { body { background: #111827; color: #e5e9f0; }
+      .panel { background: #1b2433 !important; border-color: #2c3a52 !important; } }
+    main { max-width: 640px; margin: 0 auto; padding: 32px 16px; }
+    .panel { background: #fff; border: 1px solid #d9dfe8; border-radius: 10px; padding: 20px; }
+    h1 { font-size: 20px; margin: 0 0 4px; }
+    p  { margin: 0 0 16px; opacity: .75; }
+    .langs { display: flex; flex-wrap: wrap; gap: 8px; }
+    button { font: inherit; padding: 8px 14px; border-radius: 8px; border: 1px solid #3fa9f5;
+             background: transparent; color: inherit; cursor: pointer; }
+    button[aria-pressed="true"] { background: #3fa9f5; color: #fff; }
+    label { display: block; margin-top: 16px; font-size: 13px; opacity: .8; }
+  </style>
+  <!-- three.js en ES module. Hors ligne : copier three.module.js en local et changer le chemin. -->
+  <script type="importmap">
+    { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js" } }
+  </script>
+</head>
+<body>
+  <main>
+    <div class="panel">
+      <h1 data-i18n="title"></h1>
+      <p data-i18n="hint"></p>
+      <div class="langs" id="langs"></div>
+      <label><input type="range" id="delay" min="300" max="5000" step="100" value="2200">
+        <span data-i18n="delay"></span> : <output id="delayOut">2200</output> ms</label>
+    </div>
+  </main>
+
+  <script type="module">
+    import { LanguageSwitchLoader, DEFAULT_LANGUAGES } from './language-switch-loader.js';
+
+    // Libellés de démo (dans l'appli : dictionnaires i18n chargés depuis le back-end C#)
+    const I18N = {
+      FR: { title: 'Ma session — Langue', hint: 'Choisissez la langue de l’interface.', delay: 'Latence simulée du serveur' },
+      EN: { title: 'My session — Language', hint: 'Choose the interface language.', delay: 'Simulated server latency' },
+      DE: { title: 'Meine Sitzung — Sprache', hint: 'Wählen Sie die Sprache der Oberfläche.', delay: 'Simulierte Serverlatenz' },
+      NL: { title: 'Mijn sessie — Taal', hint: 'Kies de taal van de interface.', delay: 'Gesimuleerde serverlatentie' },
+      ES: { title: 'Mi sesión — Idioma', hint: 'Elija el idioma de la interfaz.', delay: 'Latencia simulada del servidor' },
+      IT: { title: 'La mia sessione — Lingua', hint: 'Scegli la lingua dell’interfaccia.', delay: 'Latenza simulata del server' },
+    };
+
+    const loader = new LanguageSwitchLoader();
+    let current = 'FR';
+    const delay = document.getElementById('delay');
+    delay.oninput = () => (document.getElementById('delayOut').value = delay.value);
+
+    function applyLabels(code) {
+      document.documentElement.lang = code.toLowerCase();
+      document.querySelectorAll('[data-i18n]').forEach((el) => (el.textContent = I18N[code][el.dataset.i18n]));
+      document.querySelectorAll('#langs button').forEach((b) => b.setAttribute('aria-pressed', b.value === current));
+    }
+
+    // Simule PUT /api/session/langue + chargement du dictionnaire
+    const fakeServer = (ms) => new Promise((r) => setTimeout(r, ms));
+
+    async function changeLanguage(target) {
+      if (target === current) return;
+      loader.start(current, target);
+      try {
+        await fakeServer(+delay.value);
+        current = target;
+        applyLabels(current);       // les libellés changent derrière la surcouche
+      } finally {
+        await loader.finish();
+      }
+    }
+
+    const box = document.getElementById('langs');
+    DEFAULT_LANGUAGES.forEach((l) => {
+      const b = document.createElement('button');
+      b.value = l.code;
+      b.textContent = l.name;       // chaque langue affichée dans sa propre langue
+      b.onclick = () => changeLanguage(l.code);
+      box.appendChild(b);
+    });
+    applyLabels(current);
+  </script>
+</body>
+</html>
