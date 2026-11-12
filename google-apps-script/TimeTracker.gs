@@ -28,6 +28,12 @@ var OBJECTIFS_HEBDO_MIN = {
   "CODRA" : 37.5 * 60   // 37h30
 };
 
+// Catégories ajoutées au temps d'une catégorie pour calculer son écart.
+// Ici : écart CODRA = (CODRA + CONGÉS/FÉRIÉS) − 37h30
+var AJOUTS_ECART = {
+  "CODRA" : ["CONGÉS/FÉRIÉS"]
+};
+
 // Couleurs de l'écart
 var COULEUR_ECART_PLUS  = "#d93025"; // au-dessus de l'objectif
 var COULEUR_ECART_MOINS = "#e37400"; // en dessous de l'objectif
@@ -97,11 +103,23 @@ function buildHtml() {
       // Écart avec l'objectif hebdo, affiché sous le badge
       if (OBJECTIFS_HEBDO_MIN.hasOwnProperty(kw)) {
         var objectif = OBJECTIFS_HEBDO_MIN[kw];
-        var ecart    = min - objectif;
+
+        // Ajoute les catégories comptées avec celle-ci (ex. congés pour CODRA)
+        var ajoutMin = 0;
+        var detail   = kw + " " + formatDuree(min);
+        (AJOUTS_ECART[kw] || []).forEach(function(kwAjout) {
+          var m = totalMinList(semaine.parKeyword[kwAjout] || []);
+          ajoutMin += m;
+          detail   += " + " + kwAjout + " " + formatDuree(m);
+        });
+
+        var ecart    = min + ajoutMin - objectif;
         var couleur  = ecart > 0 ? COULEUR_ECART_PLUS : (ecart < 0 ? COULEUR_ECART_MOINS : COULEUR_ECART_ZERO);
+        var mention  = ajoutMin > 0 ? " (congés " + formatDuree(ajoutMin) + " inclus)" : "";
         totauxSpans += "<span class='kw-col'>" + badge
-          + "<span class='ecart' style='color:" + couleur + "' title='Objectif : " + formatDuree(objectif) + "'>"
-          + "écart " + formatEcart(ecart) + " / " + formatDuree(objectif)
+          + "<span class='ecart' style='color:" + couleur + "' title='" + htmlEscape(detail)
+          + " − objectif " + formatDuree(objectif) + "'>"
+          + "écart " + formatEcart(ecart) + " / " + formatDuree(objectif) + mention
           + "</span></span>";
       } else {
         totauxSpans += badge;
