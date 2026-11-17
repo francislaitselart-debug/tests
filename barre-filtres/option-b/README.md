@@ -71,7 +71,10 @@ dans [exemple-barre.xml](exemple-barre.xml) (les 3 filtres actuels, dont deux à
 J'ai retenu le **XML avec un schéma XSD** pour trois raisons :
 
 - il se lit nativement en .NET 4 (`XmlSerializer`, `XDocument`) sans aucune dépendance ;
-- Visual Studio offre l'autocomplétion et la validation à la saisie dès que le schéma est associé au fichier ;
+- **VS Code**, avec l'extension *XML* de Red Hat (`redhat.vscode-xml`, recommandée par le dépôt),
+  offre l'autocomplétion, l'aide sur les attributs et la validation à la saisie. Il suffit que le
+  fichier déclare son schéma :
+  `xsi:schemaLocation="urn:panorama:barre-filtres:1 <chemin relatif>/barre-filtres.xsd"` ;
 - les références incohérentes (style inconnu, identifiant ou variable en double,
   valeur d'état en double) sont rejetées par le schéma lui-même.
 

@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   Grammaire de description d'une barre de filtres Panorama E2 (option B : images pré-générées).
-  Associer ce schéma au fichier XML dans Visual Studio pour bénéficier de l'autocomplétion
-  et de la validation à la saisie.
+  VS Code (extension "XML" de Red Hat, redhat.vscode-xml) : autocomplétion et validation
+  à la saisie dès que le fichier XML déclare
+    xsi:schemaLocation="urn:panorama:barre-filtres:1 <chemin relatif vers>/barre-filtres.xsd"
   Règles non exprimables en XSD (vérifiées par le générateur) :
     - exactement un <Etat neutre="true"> par filtre ;
     - les valeurs de l'attribut cycle existent parmi les <Etat> du filtre ;

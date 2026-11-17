@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Exemple : les trois filtres de la barre actuelle, avec des états multiples. -->
 <BarreFiltres xmlns="urn:panorama:barre-filtres:1"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="urn:panorama:barre-filtres:1 barre-filtres.xsd"
               version="1"
               langues="FR EN DE ES"
               dossierSortie="BarreFiltres\Evenements"
