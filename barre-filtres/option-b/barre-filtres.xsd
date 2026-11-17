@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Grammaire de description d'une barre de filtres Panorama E2 (option B : images pré-générées).
+  Associer ce schéma au fichier XML dans Visual Studio pour bénéficier de l'autocomplétion
+  et de la validation à la saisie.
+  Règles non exprimables en XSD (vérifiées par le générateur) :
+    - exactement un <Etat neutre="true"> par filtre ;
+    - les valeurs de l'attribut cycle existent parmi les <Etat> du filtre ;
+    - chaque clé de texte référencée est traduite dans chaque langue déclarée.
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           targetNamespace="urn:panorama:barre-filtres:1"
+           xmlns="urn:panorama:barre-filtres:1"
+           xmlns:b="urn:panorama:barre-filtres:1"
+           elementFormDefault="qualified">
+
+  <!-- Types simples -->
+  <xs:simpleType name="Couleur">
+    <xs:annotation><xs:documentation>#RRGGBB, #AARRGGBB ou "transparent".</xs:documentation></xs:annotation>
+    <xs:restriction base="xs:string">
+      <xs:pattern value="#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?|transparent"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="CouleurIcone">
+    <xs:annotation><xs:documentation>Couleur appliquée à une icône monochrome, ou "origine" pour la garder telle quelle.</xs:documentation></xs:annotation>
+    <xs:union memberTypes="Couleur">
+      <xs:simpleType>
+        <xs:restriction base="xs:string"><xs:enumeration value="origine"/></xs:restriction>
+      </xs:simpleType>
+    </xs:union>
+  </xs:simpleType>
+
+  <xs:simpleType name="Identifiant">
+    <xs:restriction base="xs:string"><xs:pattern value="[A-Za-z][A-Za-z0-9_]*"/></xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="CodeLangue">
+    <xs:restriction base="xs:string"><xs:pattern value="[A-Z]{2}(-[A-Z]{2})?"/></xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="ListeLangues">
+    <xs:list itemType="CodeLangue"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="ListeValeurs">
+    <xs:list itemType="xs:int"/>
+  </xs:simpleType>
+
+  <!-- Attributs de style, communs à <Style> et à <Etat> (surcharge locale) -->
+  <xs:attributeGroup name="AttributsStyle">
+    <xs:attribute name="fond" type="Couleur"/>
+    <xs:attribute name="bordure" type="Couleur"/>
+    <xs:attribute name="epaisseurBordure" type="xs:decimal"/>
+    <xs:attribute name="texte" type="Couleur"/>
+    <xs:attribute name="couleurIcone" type="CouleurIcone"/>
+    <xs:attribute name="gras" type="xs:boolean"/>
+  </xs:attributeGroup>
+
+  <!-- Racine -->
+  <xs:element name="BarreFiltres">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Charte" type="TCharte"/>
+        <xs:element name="Textes" type="TTextes" minOccurs="0"/>
+        <xs:element name="Filtre" type="TFiltre" maxOccurs="unbounded">
+          <xs:unique name="ValeurEtatUnique"><xs:selector xpath="b:Etat"/><xs:field xpath="@valeur"/></xs:unique>
+        </xs:element>
+      </xs:sequence>
+      <xs:attribute name="version" type="xs:int" use="required" fixed="1"/>
+      <xs:attribute name="langues" type="ListeLangues" use="required"/>
+      <xs:attribute name="dossierSortie" type="xs:string" use="required">
+        <xs:annotation><xs:documentation>Chemin relatif au dossier images de Panorama.</xs:documentation></xs:annotation>
+      </xs:attribute>
+      <xs:attribute name="ecart" type="xs:int" default="8">
+        <xs:annotation><xs:documentation>Espace en pixels entre deux boutons.</xs:documentation></xs:annotation>
+      </xs:attribute>
+    </xs:complexType>
+
+    <xs:key name="CleStyle"><xs:selector xpath="b:Charte/b:Style"/><xs:field xpath="@id"/></xs:key>
+    <xs:keyref name="RefStyle" refer="CleStyle"><xs:selector xpath="b:Filtre/b:Etat"/><xs:field xpath="@style"/></xs:keyref>
+    <xs:unique name="FiltreUnique"><xs:selector xpath="b:Filtre"/><xs:field xpath="@id"/></xs:unique>
+    <xs:unique name="VariableUnique"><xs:selector xpath="b:Filtre"/><xs:field xpath="@variable"/></xs:unique>
+  </xs:element>
+
+  <!-- Charte graphique -->
+  <xs:complexType name="TCharte">
+    <xs:sequence>
+      <xs:element name="Police">
+        <xs:complexType>
+          <xs:attribute name="nom" type="xs:string" use="required"/>
+          <xs:attribute name="taille" type="xs:decimal" use="required"/>
+          <xs:attribute name="unite" default="pt">
+            <xs:simpleType><xs:restriction base="xs:string">
+              <xs:enumeration value="pt"/><xs:enumeration value="px"/>
+            </xs:restriction></xs:simpleType>
+          </xs:attribute>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="Geometrie">
+        <xs:annotation><xs:documentation>Cotes en pixels, à l'échelle 1.</xs:documentation></xs:annotation>
+        <xs:complexType>
+          <xs:attribute name="hauteur" type="xs:int" use="required"/>
+          <xs:attribute name="rayon" type="xs:int" default="0">
+            <xs:annotation><xs:documentation>Rayon des coins ; hauteur/2 donne une pilule.</xs:documentation></xs:annotation>
+          </xs:attribute>
+          <xs:attribute name="margeGauche" type="xs:int" default="10"/>
+          <xs:attribute name="margeDroite" type="xs:int" default="12"/>
+          <xs:attribute name="tailleIcone" type="xs:int" default="16"/>
+          <xs:attribute name="espaceIcone" type="xs:int" default="6"/>
+          <xs:attribute name="largeurMinimale" type="xs:int" default="0"/>
+          <xs:attribute name="largeurMaximale" type="xs:int" default="0">
+            <xs:annotation><xs:documentation>0 = sans limite ; sinon le texte est tronqué avec « … ».</xs:documentation></xs:annotation>
+          </xs:attribute>
+          <xs:attribute name="echelles" type="xs:string" default="1">
+            <xs:annotation><xs:documentation>Facteurs de génération, ex. "1 1.5 2" pour les écrans haute résolution.</xs:documentation></xs:annotation>
+          </xs:attribute>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="Style" maxOccurs="unbounded">
+        <xs:complexType>
+          <xs:attribute name="id" type="Identifiant" use="required"/>
+          <xs:attribute name="herite" type="Identifiant"/>
+          <xs:attributeGroup ref="AttributsStyle"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Textes multilingues -->
+  <xs:complexType name="TTextes">
+    <xs:sequence>
+      <xs:element name="Fichier" minOccurs="0" maxOccurs="unbounded">
+        <xs:annotation><xs:documentation>Table externe Cle;Langue;Libelle (UTF-8), relative au fichier XML.</xs:documentation></xs:annotation>
+        <xs:complexType><xs:attribute name="chemin" type="xs:string" use="required"/></xs:complexType>
+      </xs:element>
+      <xs:element name="Texte" minOccurs="0" maxOccurs="unbounded">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="T" maxOccurs="unbounded">
+              <xs:complexType>
+                <xs:simpleContent>
+                  <xs:extension base="xs:string">
+                    <xs:attribute name="langue" type="CodeLangue" use="required"/>
+                  </xs:extension>
+                </xs:simpleContent>
+              </xs:complexType>
+            </xs:element>
+          </xs:sequence>
+          <xs:attribute name="cle" type="Identifiant" use="required"/>
+        </xs:complexType>
+        <xs:unique name="LangueUnique"><xs:selector xpath="b:T"/><xs:field xpath="@langue"/></xs:unique>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Filtre et ses états -->
+  <xs:complexType name="TFiltre">
+    <xs:sequence>
+      <xs:element name="Etat" type="TEtat" minOccurs="2" maxOccurs="unbounded"/>
+    </xs:sequence>
+    <xs:attribute name="id" type="Identifiant" use="required"/>
+    <xs:attribute name="variable" type="xs:string" use="required">
+      <xs:annotation><xs:documentation>Variable Panorama (entière) portant la valeur de l'état courant.</xs:documentation></xs:annotation>
+    </xs:attribute>
+    <xs:attribute name="libelle" type="Identifiant" use="required"/>
+    <xs:attribute name="icone" type="xs:string"/>
+    <xs:attribute name="infobulle" type="Identifiant"/>
+    <xs:attribute name="cycle" type="ListeValeurs">
+      <xs:annotation><xs:documentation>Ordre de passage des états au clic. Par défaut : ordre de déclaration.</xs:documentation></xs:annotation>
+    </xs:attribute>
+  </xs:complexType>
+
+  <xs:complexType name="TEtat">
+    <xs:attribute name="valeur" type="xs:int" use="required"/>
+    <xs:attribute name="neutre" type="xs:boolean" default="false"/>
+    <xs:attribute name="style" type="Identifiant" use="required"/>
+    <xs:attribute name="libelle" type="Identifiant"/>
+    <xs:attribute name="icone" type="xs:string"/>
+    <xs:attribute name="infobulle" type="Identifiant"/>
+    <xs:attributeGroup ref="AttributsStyle"/>
+  </xs:complexType>
+</xs:schema>

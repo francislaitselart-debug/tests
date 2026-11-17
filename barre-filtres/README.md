@@ -1,5 +1,12 @@
 # Barre de filtres à état — Panorama E2 (vue + images)
 
+> **Option retenue : B — images pré-générées.** Voir [option-b/README.md](option-b/README.md)
+> (architecture, modèle d'état à N états, grammaire XML/XSD de configuration).
+>
+> La suite de ce document décrit l'**option D** (fond en 3 images et largeur de texte
+> calculée), conservée comme alternative. Sa version C#, avec mesure des libellés en
+> exécution, est dans [panorama/BarreFiltres.cs](panorama/BarreFiltres.cs).
+
 Remplacement du composant d'IHM web par une **vue Panorama** dont les boutons sont
 faits d'**objets image**, avec gestion du **multilingue** et des **libellés de
 longueur variable**.
