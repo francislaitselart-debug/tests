@@ -1,85 +1,139 @@
 # Option B — boutons en images pré-générées
 
-Chaque bouton est **une seule image** (fond, icône et libellé traduit), générée
-à l'avance pour chaque filtre, langue et état. Le problème des libellés de
-longueur variable disparaît : chaque image a sa propre largeur, et la barre
-aligne simplement les images les unes après les autres.
+Chaque bouton est **une seule image** (fond, icône colorisée et libellé traduit),
+générée à l'avance pour chaque filtre, langue et état. Le problème des libellés de
+longueur variable disparaît : chaque image a sa propre largeur, et la barre aligne
+simplement les images les unes après les autres.
 
 ## Contraintes Panorama retenues
 
-| Point | Réponse |
+| Point | Réponse | Traitement |
+|---|---|---|
+| Génération | À l'avance | `GenerateurBarre.exe`, lancé au moment de la livraison |
+| Désignation d'une image | Fichier sur disque, chemin relatif au dossier images de Panorama | Le manifeste donne ce chemin relatif |
+| Taille d'un objet image | Prend la taille de l'image. Déformation en % et position modifiables en exécution | Le script positionne seulement. La déformation sert aux échelles > 1 |
+| États | N états par bouton, dont un neutre | Variable entière par filtre, cycle de clic configurable |
+| Infobulle | Propriété native de l'objet image | Texte traduit fourni par le manifeste |
+| Survol | Pas de visuel, seulement le texte | Pas d'image de survol : l'infobulle suffit |
+| Icônes | Colorisées à la génération, pas par Panorama | Attribut `couleurIcone` du style (ou `origine`) |
+| Langue | Variable système donnant le code langue | `SurChangementLangue()`, codes `fr`, `fr-FR`, `FR` acceptés, puis repli |
+
+## Contenu
+
+| Fichier | Rôle |
 |---|---|
-| Moment de la génération | **À l'avance**, au moment de la livraison |
-| Désignation d'une image | Fichier sur disque, chemin **relatif au dossier images** de Panorama |
-| Taille d'un objet image | Prend la taille de l'image par défaut. Déformation largeur/hauteur en % et position modifiables en exécution |
-| États d'un bouton | **N états par bouton**, dont **un neutre** |
-| Infobulle | Souhaitée |
+| [barre-filtres.xsd](barre-filtres.xsd) | Grammaire de configuration |
+| [exemple-barre.xml](exemple-barre.xml) | Exemple : les 3 filtres actuels, dont deux à 3 états |
+| [icones/](icones) | Icônes d'exemple, provisoires, à remplacer par les vôtres |
+| [generateur/GenerateurBarre.cs](generateur/GenerateurBarre.cs) | Générateur des PNG, du manifeste et de l'aperçu |
+| [generateur/build.cmd](generateur/build.cmd) | Compilation avec le `csc` du .NET Framework 4.x, sans SDK |
+| [panorama/BarreFiltresImages.cs](panorama/BarreFiltresImages.cs) | Script d'exécution de la vue |
 
 ## Chaîne complète
 
 ```
  exemple-barre.xml ─┐
- libelles.csv      ─┼─► Générateur C# ─┬─► <dossierSortie>\<Filtre>\<LANG>_<valeur>.png
- icones\*.png      ─┘   (à l'avance)   └─► <dossierSortie>\barre.manifest
-                                                        │
-                                   Script C# de la vue ◄┘  (exécution)
-                                   - choisit l'image selon la langue et l'état
-                                   - aligne les boutons (x += largeur + écart)
-                                   - au clic : passe à l'état suivant du cycle
-                                   - affiche l'infobulle de l'état
+ libelles.csv      ─┼─► GenerateurBarre.exe ─┬─► <dossierSortie>\<Filtre>\<LANGUE>_<valeur>.png
+ icones\*.png      ─┘   (à l'avance)         ├─► <dossierSortie>\barre.manifest
+                                             └─► <dossierSortie>\apercu.html  (contrôle visuel)
+                                                          │
+                          BarreFiltresImages.cs (vue)  ◄──┘  en exécution
 ```
 
-### Nommage des images
+## 1. Générer les images
 
-`<dossierSortie>\<idFiltre>\<LANGUE>_<valeur>[@<échelle>x].png`
-
-Par exemple : `BarreFiltres\Evenements\CNX\DE_2.png`, ou `...\CNX\DE_2@2x.png` pour un écran
-haute résolution. Le suffixe d'échelle n'apparaît que si `echelles` en déclare plusieurs.
-
-### Manifeste
-
-Le générateur produit un fichier `barre.manifest` (CSV UTF-8). Le script d'exécution n'a
-ainsi ni à ouvrir les PNG, ni à traduire quoi que ce soit :
-
-```
-Filtre;Variable;Langue;Valeur;Neutre;Fichier;Largeur;Hauteur;Infobulle
-CNX;Filtre.Connexion;DE;2;0;CNX\DE_2.png;104;28;Nach Verbindungsstatus filtern
+```bat
+generateur\build.cmd
+generateur\GenerateurBarre.exe exemple-barre.xml /racine:"C:\MonProjet\Images" /nettoyer
 ```
 
-La première ligne de chaque filtre donne l'ordre d'affichage. L'ordre de passage des
-états au clic vient d'une ligne `#cycle;CNX;0 1 2`.
+| Option | Effet |
+|---|---|
+| `/racine:` | Dossier images de Panorama. Par défaut : `sortie\` à côté du XML |
+| `/xsd:` | Schéma. Par défaut : `barre-filtres.xsd` à côté du XML, puis à côté de l'exe |
+| `/nettoyer` | Supprime d'abord les PNG existants des dossiers de filtres (états ou langues retirés) |
+| `/apercu-` | Ne produit pas `apercu.html` |
 
-## Modèle d'état
+Le générateur valide le XML contre le schéma, puis vérifie les règles que le schéma
+ne peut pas exprimer :
+- exactement un état neutre par filtre ;
+- des valeurs de `cycle` qui existent ;
+- toutes les traductions présentes ;
+- toutes les icônes présentes ;
+- la police installée sur le poste.
 
-- **Une variable entière par filtre** (attribut `variable`). Elle contient la valeur de
-  l'état courant et sert de source de vérité aux autres traitements.
-- **Neutre** : l'état marqué `neutre="true"` (en général la valeur 0) signifie
-  « pas de filtrage ». Une commande « Réinitialiser » remet tous les filtres à leur état neutre.
-- **Cycle** : chaque clic fait passer à l'état suivant de la liste `cycle`
-  (par défaut, l'ordre de déclaration), en revenant au début après le dernier.
-- **Lecture globale** : une chaîne `EVT=1;CNX=0;COM=1` pour un échange ou une
-  sauvegarde, et une fonction `EtatFiltre("CNX")` pour un traitement ciblé.
-  Le masque binaire de l'option D ne convient plus, puisqu'il y a plus de deux états.
-- **Changement externe** : si un autre traitement modifie une variable, il suffit
-  de rafraîchir l'image du bouton concerné. Ce rafraîchissement peut passer par une
-  animation Panorama liée à la variable.
+**Il n'écrit rien s'il trouve une erreur** et renvoie un code de sortie différent de 0, ce qui permet de l'intégrer à un script de livraison. Il signale aussi les libellés tronqués par `largeurMaximale`.
+
+`apercu.html` affiche la barre à l'état neutre dans chaque langue, puis chaque filtre
+avec ses états et ses dimensions. Au survol, on voit l'infobulle.
+
+### Nommage
+
+`<dossierSortie>\<idFiltre>\<LANGUE>_<valeur>.png`, et `…@<échelle>x.png` pour une
+échelle différente de 1. Exemple : `BarreFiltres\Evenements\CNX\DE_2.png`.
+
+### Manifeste `barre.manifest` (UTF-8)
+
+```
+#version;1
+#ecart;8
+#langues;FR EN DE ES
+#langueRepli;EN
+#echelles;1
+#ordre;EVT;CNX;COM
+#filtre;CNX;Filtre.Connexion;0;0 1 2          ← id ; variable ; valeur neutre ; cycle
+Filtre;Langue;Valeur;Echelle;Fichier;Largeur;Hauteur;Tronque;Infobulle
+CNX;DE;2;1;BarreFiltres\Evenements\CNX\DE_2.png;112;28;0;Nach Verbindungsstatus filtern
+```
+
+## 2. Intégrer dans la vue Panorama
+
+1. Placer **un objet image par filtre** dans la vue, dans l'ordre de `#ordre` (rang 0, 1, 2…).
+2. Compléter les adaptateurs de `BarreFiltresPanorama`, en bas de
+   `BarreFiltresImages.cs`. C'est la seule partie qui dépend de l'API Panorama :
+
+   | Méthode | À faire |
+   |---|---|
+   | `LireLangueSysteme()` | Lire la variable système du code langue |
+   | `LireVariable` / `EcrireVariable` | Lire et écrire les variables entières d'état |
+   | `AfficherImage(id, rang, fichier)` | Changer le fichier de l'objet image n° rang |
+   | `PlacerImage(id, rang, x)` | Changer la position horizontale de l'objet |
+   | `DefinirInfobulle(id, rang, texte)` | Changer l'infobulle de l'objet |
+   | *(facultatif)* `DeformerImage`, `EchelleEcran` | Écrans haute résolution, si `echelles` en déclare plusieurs |
+   | *(facultatif)* `CorrespondanceLangue` | Si la variable système ne donne pas un code ISO (ex. LCID 1036 → FR) |
+
+3. Brancher les événements :
+
+   | Événement Panorama | Appel |
+   |---|---|
+   | Ouverture de la vue | `MiseEnPage()` |
+   | Changement de la variable système de langue | `SurChangementLangue()` |
+   | Clic sur l'image n° *i* | `ClicRang(i)` ou `Clic("CNX")` |
+   | Variable d'état modifiée par un autre traitement | `MiseEnPage()` |
+
+## 3. Utiliser l'état dans d'autres traitements
+
+| Membre | Usage |
+|---|---|
+| `EtatFiltre("CNX")` | Valeur courante du filtre. Une valeur inconnue est lue comme neutre |
+| `EstNeutre("CNX")`, `FiltrageActif` | Tests rapides |
+| `DefinirEtat("CNX", 2)` | Positionner un filtre. Une valeur inconnue lève une exception |
+| `Etats` | Lecture : `"EVT=1;CNX=0;COM=1"`. Écriture : applique la chaîne, en ignorant les clés et valeurs inconnues |
+| `Reinitialiser()` | Remet tous les filtres à l'état neutre |
+
+Les variables Panorama (`Filtre.Connexion`…) restent la source de vérité. Un traitement
+peut donc aussi les lire directement, sans passer par la classe.
 
 ## Grammaire de configuration
 
-Elle est décrite dans [barre-filtres.xsd](barre-filtres.xsd), avec un exemple complet
-dans [exemple-barre.xml](exemple-barre.xml) (les 3 filtres actuels, dont deux à 3 états).
-J'ai retenu le **XML avec un schéma XSD** pour trois raisons :
-
-- il se lit nativement en .NET 4 (`XmlSerializer`, `XDocument`) sans aucune dépendance ;
-- **VS Code**, avec l'extension *XML* de Red Hat (`redhat.vscode-xml`, recommandée par le dépôt),
-  offre l'autocomplétion, l'aide sur les attributs et la validation à la saisie. Il suffit que le
-  fichier déclare son schéma :
-  `xsi:schemaLocation="urn:panorama:barre-filtres:1 <chemin relatif>/barre-filtres.xsd"` ;
-- les références incohérentes (style inconnu, identifiant ou variable en double,
-  valeur d'état en double) sont rejetées par le schéma lui-même.
+Elle est décrite dans [barre-filtres.xsd](barre-filtres.xsd). Pour l'édition dans **VS Code**,
+l'extension *XML* de Red Hat (`redhat.vscode-xml`, recommandée par le dépôt) fournit
+l'autocomplétion, l'aide au survol et la validation à la saisie. Il suffit que le fichier
+déclare son schéma :
+`xsi:schemaLocation="urn:panorama:barre-filtres:1 <chemin relatif>/barre-filtres.xsd"`.
 
 ```
-BarreFiltres  version langues dossierSortie ecart
+BarreFiltres  version langues langueRepli? dossierSortie ecart
 ├── Charte
 │   ├── Police     nom taille unite
 │   ├── Geometrie  hauteur rayon margeGauche margeDroite tailleIcone espaceIcone
@@ -92,28 +146,18 @@ BarreFiltres  version langues dossierSortie ecart
     └── Etat{2..}  valeur neutre? style libelle? icone? infobulle? + surcharges de style
 ```
 
-**Résolution d'un état** : on part des attributs du filtre (libellé, icône, infobulle),
-l'état les surcharge, puis on applique le style désigné, éventuellement avec héritage
-(`herite`), et enfin les surcharges de style posées sur l'état lui-même.
+- **Couleurs** : `#RRGGBB`, `#RRGGBBAA` (AA = opacité) ou `transparent`.
+  `couleurIcone="origine"` garde les couleurs de l'icône source.
+- **Résolution d'un état** : on part des attributs du filtre (libellé, icône, infobulle),
+  l'état les surcharge, puis on applique le style désigné et sa chaîne `herite`, et enfin
+  les surcharges de style posées sur l'état lui-même.
+- **Textes** : les définitions `<Texte>` du XML l'emportent sur celles des fichiers CSV.
 
-**Règles vérifiées par le générateur** (non exprimables en XSD) : exactement un état
-neutre par filtre, des valeurs de `cycle` qui existent, une traduction de chaque clé
-dans chaque langue déclarée, des fichiers d'icônes présents.
+## Points d'attention
 
-## Points ouverts
-
-1. **Infobulle** : comment Panorama l'affiche-t-il sur un objet image (propriété
-   native de l'objet, ou vue superposée à gérer par script) ?
-2. **Survol** : faut-il un visuel de survol ? Il suffirait d'ajouter un style `survol`
-   par état et de générer les images `_h`.
-3. **Icônes** : sources monochromes (recolorées avec `couleurIcone`) ou en couleur (`origine`) ?
-4. **Changement de langue** : quel événement déclenche le rafraîchissement de la barre ?
-
-## Suite proposée
-
-1. Valider la grammaire, ou l'amender.
-2. Générateur C# (`csc` .NET 4, sans SDK) : lecture et validation du XML, rendu
-   GDI+ des PNG, écriture du manifeste, rapport d'anomalies.
-3. Script C# d'exécution : lecture du manifeste, mise en page, cycle des états,
-   infobulles. Il reprendra la logique déjà écrite dans `panorama/BarreFiltres.cs`
-   et restera isolé de l'API Panorama par des adaptateurs.
+- **Police** : générer sur un poste où la police de la charte est installée. Le
+  générateur refuse de continuer sinon.
+- **Rendu** : le texte est dessiné avec GDI+ (`DrawString`), et non avec GDI, pour garder
+  une transparence correcte dans les PNG.
+- **Ajout d'une langue** : l'ajouter dans `langues`, compléter les traductions, régénérer.
+  Le script n'a pas besoin d'être modifié.

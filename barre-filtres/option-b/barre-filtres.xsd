@@ -17,14 +17,14 @@
 
   <!-- Types simples -->
   <xs:simpleType name="Couleur">
-    <xs:annotation><xs:documentation>#RRGGBB, #AARRGGBB ou "transparent".</xs:documentation></xs:annotation>
+    <xs:annotation><xs:documentation>#RRGGBB, #RRGGBBAA (AA = opacité) ou "transparent".</xs:documentation></xs:annotation>
     <xs:restriction base="xs:string">
       <xs:pattern value="#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?|transparent"/>
     </xs:restriction>
   </xs:simpleType>
 
   <xs:simpleType name="CouleurIcone">
-    <xs:annotation><xs:documentation>Couleur appliquée à une icône monochrome, ou "origine" pour la garder telle quelle.</xs:documentation></xs:annotation>
+    <xs:annotation><xs:documentation>Couleur appliquée à l'icône lors de la génération (seule la transparence de l'icône source est conservée), ou "origine" pour garder ses couleurs.</xs:documentation></xs:annotation>
     <xs:union memberTypes="Couleur">
       <xs:simpleType>
         <xs:restriction base="xs:string"><xs:enumeration value="origine"/></xs:restriction>
@@ -72,6 +72,9 @@
       <xs:attribute name="langues" type="ListeLangues" use="required"/>
       <xs:attribute name="dossierSortie" type="xs:string" use="required">
         <xs:annotation><xs:documentation>Chemin relatif au dossier images de Panorama.</xs:documentation></xs:annotation>
+      </xs:attribute>
+      <xs:attribute name="langueRepli" type="CodeLangue">
+        <xs:annotation><xs:documentation>Langue utilisée quand le code langue système de Panorama ne correspond à aucune langue déclarée. Par défaut : la première de "langues".</xs:documentation></xs:annotation>
       </xs:attribute>
       <xs:attribute name="ecart" type="xs:int" default="8">
         <xs:annotation><xs:documentation>Espace en pixels entre deux boutons.</xs:documentation></xs:annotation>

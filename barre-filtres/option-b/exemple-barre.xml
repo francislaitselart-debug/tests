@@ -5,6 +5,7 @@
               xsi:schemaLocation="urn:panorama:barre-filtres:1 barre-filtres.xsd"
               version="1"
               langues="FR EN DE ES"
+              langueRepli="EN"
               dossierSortie="BarreFiltres\Evenements"
               ecart="8">
 

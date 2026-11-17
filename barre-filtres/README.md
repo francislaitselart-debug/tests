@@ -1,7 +1,7 @@
 # Barre de filtres à état — Panorama E2 (vue + images)
 
 > **Option retenue : B — images pré-générées.** Voir [option-b/README.md](option-b/README.md)
-> (architecture, modèle d'état à N états, grammaire XML/XSD de configuration).
+> (grammaire XML/XSD, générateur d'images C#, script d'exécution C#, modèle à N états).
 >
 > La suite de ce document décrit l'**option D** (fond en 3 images et largeur de texte
 > calculée), conservée comme alternative. Sa version C#, avec mesure des libellés en
