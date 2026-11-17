@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Exemple : les trois filtres de la barre actuelle, avec des états multiples. -->
+<BarreFiltres xmlns="urn:panorama:barre-filtres:1"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="urn:panorama:barre-filtres:1 barre-filtres.xsd"
+              version="1"
+              langues="FR EN DE ES"
+              langueRepli="EN"
+              dossierSortie="BarreFiltres\Evenements"
+              ecart="8">
+
+  <Charte>
+    <Police nom="Segoe UI" taille="9" unite="pt"/>
+    <Geometrie hauteur="28" rayon="14"
+               margeGauche="10" margeDroite="12"
+               tailleIcone="16" espaceIcone="6"
+               largeurMaximale="180"
+               echelles="1"/>
+
+    <!-- Styles réutilisables ; un style peut hériter d'un autre et ne redéfinir que ce qui change. -->
+    <Style id="neutre" fond="#FFFFFF" bordure="#D0D4DA" epaisseurBordure="1"
+           texte="#2B2F36" couleurIcone="#2B2F36" gras="false"/>
+    <Style id="actif"  herite="neutre" fond="#E8F0FE" bordure="#1A73E8" texte="#1A73E8" couleurIcone="#1A73E8"/>
+    <Style id="exclu"  herite="neutre" fond="#FCE8E6" bordure="#D93025" texte="#D93025" couleurIcone="#D93025"/>
+  </Charte>
+
+  <Textes>
+    <!-- Les libellés peuvent venir de la table de traduction existante… -->
+    <Fichier chemin="..\outil-largeurs\exemple-libelles.csv"/>
+
+    <!-- …et/ou être décrits ici (libellés propres à un état, infobulles). -->
+    <Texte cle="FLT_EVT_TERMINE">
+      <T langue="FR">Évènement terminé</T><T langue="EN">Ended event</T>
+      <T langue="DE">Beendetes Ereignis</T><T langue="ES">Evento terminado</T>
+    </Texte>
+    <Texte cle="TT_EVT_TOUS">
+      <T langue="FR">Tous les évènements</T><T langue="EN">All events</T>
+      <T langue="DE">Alle Ereignisse</T><T langue="ES">Todos los eventos</T>
+    </Texte>
+    <Texte cle="TT_EVT_EN_COURS">
+      <T langue="FR">Seulement les évènements en cours</T><T langue="EN">Only current events</T>
+      <T langue="DE">Nur laufende Ereignisse</T><T langue="ES">Solo eventos en curso</T>
+    </Texte>
+    <Texte cle="TT_EVT_TERMINE">
+      <T langue="FR">Seulement les évènements terminés</T><T langue="EN">Only ended events</T>
+      <T langue="DE">Nur beendete Ereignisse</T><T langue="ES">Solo eventos terminados</T>
+    </Texte>
+    <Texte cle="TT_CNX">
+      <T langue="FR">Filtrer sur l'état de connexion</T><T langue="EN">Filter on connection state</T>
+      <T langue="DE">Nach Verbindungsstatus filtern</T><T langue="ES">Filtrar por estado de conexión</T>
+    </Texte>
+    <Texte cle="TT_COM">
+      <T langue="FR">Seulement les évènements commentés</T><T langue="EN">Only commented events</T>
+      <T langue="DE">Nur kommentierte Ereignisse</T><T langue="ES">Solo eventos comentados</T>
+    </Texte>
+  </Textes>
+
+  <!-- Filtre à 3 états : neutre → en cours → terminé → neutre… -->
+  <Filtre id="EVT" variable="Filtre.Evenement" libelle="FLT_EVT_EN_COURS"
+          icone="icones\cloche.png" infobulle="TT_EVT_TOUS" cycle="0 1 2">
+    <Etat valeur="0" neutre="true" style="neutre"/>
+    <Etat valeur="1" style="actif" infobulle="TT_EVT_EN_COURS"/>
+    <Etat valeur="2" style="actif" libelle="FLT_EVT_TERMINE"
+          icone="icones\cloche-barree.png" infobulle="TT_EVT_TERMINE"/>
+  </Filtre>
+
+  <!-- Filtre à 3 états : neutre / connectés / déconnectés (style « exclu »). -->
+  <Filtre id="CNX" variable="Filtre.Connexion" libelle="FLT_CONNEXION"
+          icone="icones\wifi.png" infobulle="TT_CNX">
+    <Etat valeur="0" neutre="true" style="neutre"/>
+    <Etat valeur="1" style="actif"/>
+    <Etat valeur="2" style="exclu" icone="icones\wifi-off.png"/>
+  </Filtre>
+
+  <!-- Filtre classique à 2 états, avec surcharge locale de style (texte en gras). -->
+  <Filtre id="COM" variable="Filtre.Commentaire" libelle="FLT_COMMENTAIRE"
+          icone="icones\commentaire.png" infobulle="TT_COM">
+    <Etat valeur="0" neutre="true" style="neutre"/>
+    <Etat valeur="1" style="actif" gras="true"/>
+  </Filtre>
+</BarreFiltres>
